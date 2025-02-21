@@ -1,0 +1,14 @@
+.venv/
+build/
+.idea/
+__pycache__/
+test.py
+response.json
+data/
+dist/
+chrome/
+firefox/
+*.spec
+*.jpg
+*.png
+*.ico
