@@ -1,10 +1,13 @@
 # 关于
-一款简易的B站开播检测、新动态检测、粉丝数和舰长数量统计，并在开播时和新动态发布时将其推送到qq群中，需要配合llonebot使用。
+简易的B站开播检测、新动态检测、粉丝数和舰长数量统计，并在开播时和新动态发布时将其推送到qq群中
 
 # 用法
 ## 注意事项
 本程序仅在`python 3.12`中测试过，其它python版本不保证兼容性
-为防止风控以及B站api的调用需要，需要使用B站APP扫码登录账号，推荐使用小号，并仅关注需要检测的up主，即关注列表中只有一人
+
+为防止风控以及B站api的调用需要，需要使用B站APP扫码登录账号。
+
+推荐使用小号，并仅关注需要检测的up主，即关注列表中只有一人
 
 ## step0: llonebot
 需要使用[llonebot](https://github.com/LLOneBot/LLOneBot)，项目地址: https://github.com/LLOneBot/LLOneBot
@@ -45,5 +48,5 @@ live_interval: 直播检测频率，单位分钟
 ```
 
 ## step3: 运行
-直接`python main.py`或打包成二进制文件运行
+`python main.py`或打包成二进制文件运行
 
