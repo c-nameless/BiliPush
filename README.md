@@ -5,7 +5,7 @@
 ## 注意事项
 本程序仅在`python 3.12`中测试过，其它python版本不保证兼容性
 
-为防止风控以及B站api的调用需要，需要使用B站APP扫码登录账号。
+为防止风控以及B站api的调用需要，需要使用B站APP扫码登录账号
 
 推荐使用小号，并仅关注需要检测的up主，即关注列表中只有一人
 
@@ -28,8 +28,8 @@
     "admin": 1919810,
     "groups": [111,222,333],
     "at_all": [111],
-    "dynamic_interval": 1,
-    "live_interval": 5
+    "dynamic_interval": 5,
+    "live_interval": 1
 }
 ```
 
@@ -39,7 +39,7 @@ llonebot: llonebot的地址, http
 browser_type: 浏览器类型，chrome或firefox，用于获取动态截图
 browser_path: 浏览器可执行文件路径
 driver_path: 浏览器驱动路径，供selenium使用
-uid: : 要检测的up主的uid
+uid: 要检测的up主的uid
 admin: 管理员qq号，程序异常退出时会向其发送通知
 groups: 当检测到开播或新动态时，发送通知的群
 at_all: 启用@all的群，需要群管理员权限
