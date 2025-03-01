@@ -125,7 +125,7 @@ def send_new_dynamic(data):
     msg = GroupMsg()
     for item in data:
         try:
-            msg.appendMsg(TextMsg(f"{item["modules"]["module_author"]["name"]}发布了新动态"))
+            msg.appendMsg(TextMsg(f'{item["modules"]["module_author"]["name"]}发布了新动态'))
             success, dynamic_pic = browser_get(item["id_str"])
             if not success:
                 raise Exception("dynamic screen shoot failed")
@@ -135,7 +135,7 @@ def send_new_dynamic(data):
             for pic in pics:
                 msg.appendMsg(NetworkImageMsg(pic))
             
-            msg.appendMsg(TextMsg(f"https://t.bilibili.com/{item["id_str"]}\n"))
+            msg.appendMsg(TextMsg('https://t.bilibili.com/{item["id_str"]}\n'))
             msg.appendMsg(AtAllMsg())
             
             msg.send()
