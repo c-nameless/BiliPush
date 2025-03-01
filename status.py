@@ -29,7 +29,10 @@ def get_follower_num(uid: int):
 
 
 def get_captain_num(uid: int):
-    room_id = live.get_live_info(uid)
+    room_id = live.room_id
+    if room_id == 0:
+        room_id = live.get_live_info(uid)
+        
     data = live.bili_api_get(f"https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topListNew?roomid={room_id}&page=1&ruid={uid}&page_size=20&typ=5&platform=web")
     return data["info"]["num"]
 
@@ -41,6 +44,9 @@ def save_to_db(uid: int, timestamp: int, follower: int, captain: int):
 
 
 def run(uid: int):
+    follower_old = -1
+    captain_old = -1
+    
     res = cursor.execute(f"SELECT MAX(timestamp) FROM {table}").fetchone()
     if isinstance(res, tuple) and res[0] is not None:
         t = res[0]
@@ -48,6 +54,10 @@ def run(uid: int):
         if sub <= 60:
             logger.info("less than 1min, skip")
             time.sleep(sub)
+    
+    res = cursor.execute(f"SELECT follower, captain FROM {table} WHERE id = (SELECT MAX(id) FROM {table})").fetchone()
+    if res is not None:
+        follower_old, captain_old = res
     
     logger.info("start watching follower and captain num")
     while True:
@@ -62,14 +72,21 @@ def run(uid: int):
             follower = get_follower_num(uid=uid)
             captain = get_captain_num(uid=uid)
             
-            res = cursor.execute(f"SELECT follower, captain FROM {table} WHERE id = (SELECT MAX(id) FROM {table})").fetchone()
-            if res is not None:
-                follower_old, captain_old = res
-                if follower_old != follower or captain_old != captain:
-                    save_to_db(uid=uid, timestamp=timestamp, follower=follower, captain=captain)
-                    
-            else:
+            if follower_old == -1 and captain_old == -1:
+                follower_old = follower
+                captain_old = captain
                 save_to_db(uid=uid, timestamp=timestamp, follower=follower, captain=captain)
+                continue
+            
+            if follower_old != follower or captain_old != captain:
+                logger.info(f"follower or captain num change")
+                logger.info(f"before: follower: {follower_old}, captain: {captain_old}")
+                logger.info(f"now: follower: {follower}, captain: {captain}")
+                follower_old = follower
+                captain_old = captain
+                save_to_db(uid=uid, timestamp=timestamp, follower=follower, captain=captain)
+                continue
+            
             
         except:
             traceback.print_exc()
