@@ -7,7 +7,7 @@
 
 为防止风控以及B站api的调用需要，需要使用B站APP扫码登录账号
 
-推荐使用小号，并仅关注需要检测的up主，即关注列表中只有一人
+建议在B站关注需要检测的UP主，以获得更准确的直播时长统计
 
 ## step0: llonebot
 需要使用[llonebot](https://github.com/LLOneBot/LLOneBot)，项目地址: https://github.com/LLOneBot/LLOneBot
