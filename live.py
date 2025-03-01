@@ -59,9 +59,14 @@ def get_base64_image(url: str):
     
 
 def get_live_info(uid: int):
-    info = bili_api_get(f"https://api.live.bilibili.com/live_user/v1/Master/info?uid={uid}")
     global room_id
     global uname
+    
+    if uname != "" and room_id != 0:
+        return room_id
+    
+    info = bili_api_get(f"https://api.live.bilibili.com/live_user/v1/Master/info?uid={uid}")
+    
     uname = info["info"]["uname"]
     room_id = info["room_id"]
     
@@ -81,30 +86,40 @@ def get_room_info(id: int) -> RoomInfo:
     return room_info
 
 
-def get_live_endtime() -> datetime:
+def get_live_endtime() -> tuple[datetime, bool]:
     try:
-        data = bili_api_get("https://api.live.bilibili.com/xlive/web-ucenter/user/following?page=1&page_size=9&ignoreRecord=1&hit_ab=true")
-        lists = data["list"]
-        for i in lists:
-            if i["roomid"] == room_id:
-                record_live_time = i["record_live_time"]
-                
-                if record_live_time <= 0:
-                    logger.warning("get end time from api failed")
-                    raise Exception("get end time from api failed")
-                
-                live_end_time = datetime.fromtimestamp(record_live_time)
-                logger.info("get live end time from api")
-                return live_end_time
+        totalPage = 1
+        i = 1
+        
+        while i <= totalPage:
+            data = bili_api_get(f"https://api.live.bilibili.com/xlive/web-ucenter/user/following?page={i}&page_size=9&ignoreRecord=1&hit_ab=true")
+            totalPage = data["totalPage"]
             
+            lists = data["list"]
+            for l in lists:
+                if l["roomid"] == room_id:
+                    record_live_time = l["record_live_time"]
+                    
+                    if record_live_time <= 0:
+                        logger.warning("get end time from api failed")
+                        raise Exception("get end time from api failed")
+                    
+                    live_end_time = datetime.fromtimestamp(record_live_time)
+                    logger.info(f"get live end time from api, end time: {live_end_time}")
+                    return (live_end_time, True)
+            time.sleep(1)
+            i += 1
+        raise Exception("get end time from api failed")
+        
     except:
-        logger.info("get live end time from local")
-        return datetime.now()
+        live_end_time = datetime.now()
+        logger.info(f"get live end time from local, end time: {live_end_time}")
+        return (live_end_time, False)
 
 
 def start_living(room_info: RoomInfo):
     msg = GroupMsg()
-    msg.appendMsg(TextMsg(f"{uname}开播了\n{"=" * 15}\n{room_info.title}"))
+    msg.appendMsg(TextMsg(f'{uname}开播了\n{"=" * 15}\n{room_info.title}'))
     msg.appendMsg(Base64ImageMsg(get_base64_image(room_info.user_cover)))
     msg.appendMsg(TextMsg(f"https://live.bilibili.com/{room_id}\n"))
     msg.appendMsg(AtAllMsg())
@@ -112,7 +127,7 @@ def start_living(room_info: RoomInfo):
     
 
 def end_living(live_start: str):
-    end = get_live_endtime()
+    end, success = get_live_endtime()
     start = parser.parse(live_start)
     
     if abs(datetime.now() - end) >= timedelta(minutes=5):
@@ -128,8 +143,13 @@ def end_living(live_start: str):
     if duration.minutes != 0:
         live_duration += f"{duration.minutes}分钟"
     
-    msg = GroupMsg()    
-    msg.appendMsg(TextMsg(f"{uname}下播了\n直播时长: {live_duration}"))
+    msg = GroupMsg()
+    if success:
+        text = f"{uname}下播了\n直播时长: {live_duration}"
+    else:
+        text = f"{uname}下播了\n直播时长(估测): {live_duration}"
+        
+    msg.appendMsg(TextMsg(text))
     msg.send()
     
     return True
@@ -146,14 +166,14 @@ def run(uid: int):
     }
     
     try:
-        f = open("./data/live.json", "r+")
-        j = json.load(f)
-        live_status["living"] = j["living"]
-        live_status["start"] = j["start"]
+        with open("./data/live.json", "r") as f:
+            j = json.load(f)
+            live_status["living"] = j["living"]
+            live_status["start"] = j["start"]
         
     except:
-        f = open("./data/live.json", "w+")
-        json.dump(live_status, f)
+        with open("./data/live.json", "w") as f:
+            json.dump(live_status, f)
     
     while True:
         try:
@@ -181,19 +201,17 @@ def run(uid: int):
                     live_status["living"] = True
                     live_status["start"] = room_info.live_time
                     
-                    f.seek(0)
-                    f.truncate()
-                    json.dump(live_status, f)
+                    with open("./data/live.json", "w") as f:
+                        json.dump(live_status, f)
                     
-                    logger.warning("start live, send notification")
+                    logger.warning(f"start live at {room_info.live_time}, send notification")
 
             else:
                 if live_status["living"]:
                     live_status["living"] = False
                     
-                    f.seek(0)
-                    f.truncate()
-                    json.dump(live_status, f)
+                    with open("./data/live.json", "w") as f:
+                        json.dump(live_status, f)
                     
                     send_end = end_living(live_status["start"])
                     
