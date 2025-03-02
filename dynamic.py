@@ -135,7 +135,7 @@ def send_new_dynamic(data):
             for pic in pics:
                 msg.appendMsg(NetworkImageMsg(pic))
             
-            msg.appendMsg(TextMsg('https://t.bilibili.com/{item["id_str"]}\n'))
+            msg.appendMsg(TextMsg(f'https://t.bilibili.com/{item["id_str"]}\n'))
             msg.appendMsg(AtAllMsg())
             
             msg.send()
