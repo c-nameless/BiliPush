@@ -1,5 +1,6 @@
 import json
 import time
+import common
 import base64
 import config
 import account
@@ -176,7 +177,7 @@ def main():
         with open("./data/live.json", "w") as f:
             json.dump(live_status, f)
     
-    while True:
+    while not common.exit_event.is_set():
         try:
             room_info = get_room_info(room_id)
 
