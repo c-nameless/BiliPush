@@ -64,7 +64,9 @@ class PrivateMsg:
                 schedule.set_can_stop(False)
                 start = schedule.start()
                 if not start:
-                    raise Exception("qq start failed.")
+                    logger.error("bot start fail, send mail")
+                    fail_mail()
+                    return
 
                 ready = False
 
@@ -77,6 +79,7 @@ class PrivateMsg:
                 if not ready:
                     logger.error("bot not ready, send mail")
                     fail_mail()
+                    return
 
             url = f"{config.llonebot}/send_private_msg"
 
@@ -151,7 +154,9 @@ class GroupMsg:
             schedule.set_can_stop(False)
             start = schedule.start()
             if not start:
-                raise Exception("qq start failed.")
+                logger.error("bot start fail, send mail")
+                fail_mail()
+                return
 
             ready = False
 
@@ -164,6 +169,7 @@ class GroupMsg:
             if not ready:
                 logger.error("bot not ready, send mail")
                 fail_mail()
+                return
 
             url = f"{config.llonebot}/send_group_msg"
 
