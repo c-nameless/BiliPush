@@ -31,12 +31,12 @@ def get_cookies(key: str):
     cookie = requests.utils.dict_from_cookiejar(r.cookies)
     set_cookies(data=cookie)
     
-    j = json.dumps(cookie)
-    with open("./data/cookies.json", "w", encoding="utf-8") as f:
-        f.write(j)
-    
     
 def set_cookies(data):
+    j = json.dumps(data)
+    with open("./data/cookies.json", "w", encoding="utf-8") as f:
+        f.write(j)
+
     global cookies
     cookies = data
 
@@ -53,8 +53,7 @@ def login():
         img.show()
     else:
         code.print_tty()
-    print("scan the qrcode and press enter")
-    input()
+    input("scan the qrcode and press enter")
     get_cookies(key=key)
 
 
