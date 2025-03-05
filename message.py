@@ -1,5 +1,6 @@
 import time
 import json
+import common
 import config
 import smtplib
 import schedule
@@ -10,23 +11,30 @@ from email.mime.text import MIMEText
 
 
 def fail_mail():
-    try:
-        msg = MIMEText("发送消息失败, 请检查客户端状态", "plain", "utf-8")
-        msg["From"] = formataddr(("BiliPush", config.mail["sender"]), "utf-8")
-        msg["To"] = formataddr((None, config.mail["receiver"]), "utf-8")
-        msg["Subject"] = "BiliPush 发送失败"
+    with common.mutex:
+        if common.exit_event.is_set():
+            return
+        
+        try:
+            msg = MIMEText("BiliPush发送消息失败, 请检日志确认情况", "plain", "utf-8")
+            msg["From"] = formataddr(("BiliPush", config.mail["sender"]), "utf-8")
+            msg["To"] = formataddr((None, config.mail["receiver"]), "utf-8")
+            msg["Subject"] = "BiliPush 发送失败"
 
-        if config.mail["ssl"]:
-            smtp = smtplib.SMTP_SSL(config.mail["server"], config.mail["port"])
-        else:
-            smtp = smtplib.SMTP(config.mail["server"], config.mail["port"])
+            if config.mail["ssl"]:
+                smtp = smtplib.SMTP_SSL(config.mail["server"], config.mail["port"])
+            else:
+                smtp = smtplib.SMTP(config.mail["server"], config.mail["port"])
 
-        smtp.login(config.mail["sender"], config.mail["password"])
-        smtp.sendmail(config.mail["sender"], config.mail["receiver"], msg.as_string())
-        smtp.quit()
+            smtp.login(config.mail["sender"], config.mail["password"])
+            smtp.sendmail(config.mail["sender"], config.mail["receiver"], msg.as_string())
+            smtp.quit()
 
-    except:
-        raise Exception("send mail fail")
+        except:
+            logger.error("send mail failed", exc_info=True)
+        
+        finally:
+            common.exit_event.set()
 
 
 class PrivateMsg:

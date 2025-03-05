@@ -1,14 +1,13 @@
 import time
+import common
 import config
 import requests
-import threading
 import subprocess
 from logger import logger
 from datetime import datetime
 
 
 qq: None | subprocess.Popen = None
-mutex = threading.Lock()
 skip = False
 can_stop = False
 
@@ -21,12 +20,12 @@ def process_is_alive():
 
 
 def check_can_stop():
-    with mutex:
+    with common.mutex:
         return process_is_alive() and can_stop
 
 
 def set_can_stop(can: bool):
-    with mutex:
+    with common.mutex:
         global can_stop
         global skip
         if not can:
@@ -35,7 +34,7 @@ def set_can_stop(can: bool):
 
 
 def start():
-    with mutex:
+    with common.mutex:
         if process_is_alive():
             return True
 
@@ -52,7 +51,7 @@ def start():
 
 
 def stop():
-    with mutex:
+    with common.mutex:
         if not process_is_alive():
             return True
 
@@ -73,6 +72,12 @@ def stop():
             return False
 
 
+def force_stop():
+    logger.info("force stop qq")
+    if process_is_alive():
+        qq.kill()
+        
+
 def bot_ready():
     try:
         r = requests.post(url=f"{config.llonebot}/get_status")
@@ -92,7 +97,14 @@ def bot_ready():
 def main():
     logger.warning("auto schedule start")
     global skip
+    
     while True:
+        if common.exit_event.is_set():
+            try:
+                force_stop()
+            finally:
+                break
+                
         logger.info("check qq can stop or not")
 
         if check_can_stop():
