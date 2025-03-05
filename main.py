@@ -1,6 +1,7 @@
 import os
 import live
 import time
+import common
 import config
 import status
 import dynamic
@@ -30,15 +31,27 @@ try:
     statusThread.start()
 
     while True:
-        time.sleep(2)
-        if not (liveThread.is_alive() and dynamicThread.is_alive() and statusThread.is_alive()):
-            msg = message.PrivateMsg(user_id = config.admin)
-            msg.appendMsg(message.TextMsg("子线程异常退出, 检查日志"))
-            msg.send()
-            raise Exception("sub thread exit unexpected, check log")
+        time.sleep(5)
+        if common.exit_event.is_set():
+            logger.warning("waiting for all threads to exit")
+            
+            while liveThread.is_alive() or dynamicThread.is_alive() or statusThread.is_alive():
+                time.sleep(1)
 
-        if config.auto_schedule and not scheduleThread.is_alive():
-            raise Exception("schedule thread exit unexpected, check log")
+            while config.auto_schedule and scheduleThread.is_alive():
+                time.sleep(1)
+                
+            break
+        
+        else:
+            if not (liveThread.is_alive() and dynamicThread.is_alive() and statusThread.is_alive()):
+                msg = message.PrivateMsg(user_id = config.admin)
+                msg.appendMsg(message.TextMsg("子线程异常退出, 检查日志"))
+                msg.send()
+                common.exit_event.set()
+
+            if config.auto_schedule and not scheduleThread.is_alive():
+                common.exit_event.set()
 
 except KeyboardInterrupt:
     pass
@@ -49,5 +62,4 @@ except:
 
 finally:
     if config.auto_schedule:
-        schedule.set_can_stop(True)
-        schedule.stop()
+        schedule.force_stop()
