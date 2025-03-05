@@ -1,11 +1,32 @@
 import time
 import json
+import config
+import smtplib
+import schedule
 import requests
 from logger import logger
+from email.utils import formataddr
+from email.mime.text import MIMEText
 
-llonebot = ""
-groups = []
-at_all = []
+
+def fail_mail():
+    try:
+        msg = MIMEText("发送消息失败, 请检查客户端状态", "plain", "utf-8")
+        msg["From"] = formataddr(("BiliPush", config.mail["sender"]), "utf-8")
+        msg["To"] = formataddr((None, config.mail["receiver"]), "utf-8")
+        msg["Subject"] = "BiliPush 发送失败"
+
+        if config.mail["ssl"]:
+            smtp = smtplib.SMTP_SSL(config.mail["server"], config.mail["port"])
+        else:
+            smtp = smtplib.SMTP(config.mail["server"], config.mail["port"])
+
+        smtp.login(config.mail["sender"], config.mail["password"])
+        smtp.sendmail(config.mail["sender"], config.mail["receiver"], msg.as_string())
+        smtp.quit()
+
+    except:
+        raise Exception("send mail fail")
 
 
 class PrivateMsg:
@@ -38,18 +59,43 @@ class PrivateMsg:
         
     
     def send(self):
-        url = f"{llonebot}/send_private_msg"
+        try:
+            if config.auto_schedule:
+                schedule.set_can_stop(False)
+                start = schedule.start()
+                if not start:
+                    raise Exception("qq start failed.")
 
-        r = requests.post(url = url, data = self.toJson(), headers = {'Content-Type': 'application/json'})
-        if r.status_code != 200:
-            raise Exception(f"status code: {r.status_code}, url: {r.url}")
-        
-        res = r.json()
-        if res["status"] != "ok":
-            raise Exception(f"send message failed, error info: {r.text}")
-        
-        logger.warning(f"sending success: {r.text}")
+                ready = False
 
+                for i in range(0, 60):
+                    if schedule.bot_ready():
+                        ready = True
+                        break
+                    time.sleep(1)
+
+                if not ready:
+                    logger.error("bot not ready, send mail")
+                    fail_mail()
+
+            url = f"{config.llonebot}/send_private_msg"
+
+            r = requests.post(url = url, data = self.toJson(), headers = {'Content-Type': 'application/json'})
+            if r.status_code != 200:
+                raise Exception(f"status code: {r.status_code}, url: {r.url}")
+
+            res = r.json()
+            if res["status"] != "ok":
+                raise Exception(f"send message failed, error info: {r.text}")
+
+            logger.warning(f"sending success: {r.text}")
+
+        except Exception as e:
+            raise e
+
+        finally:
+            if config.auto_schedule:
+                schedule.set_can_stop(True)
 
 class GroupMsg:
     def __init__(self):
@@ -82,7 +128,7 @@ class GroupMsg:
     
     def check_at_all(self):
         try:
-            url = f"{llonebot}/get_group_at_all_remain"
+            url = f"{config.llonebot}/get_group_at_all_remain"
             r = requests.post(url = url, json = {"group_id": self.group_id})
             if r.status_code != 200:
                 return False
@@ -101,31 +147,56 @@ class GroupMsg:
         
     
     def send(self):
-        url = f"{llonebot}/send_group_msg"
-        
-        for id in groups:
-            self.group_id = id
-            remove_at_all = False
+        try:
+            schedule.set_can_stop(False)
+            start = schedule.start()
+            if not start:
+                raise Exception("qq start failed.")
 
-            for msg in self.message:
-                if isinstance(msg, AtAllMsg) and ((id not in at_all) or (not self.check_at_all())):
-                    remove_at_all = True
-                    self.message.remove(msg)
-            
-            r = requests.post(url = url, data = self.toJson(), headers = {'Content-Type': 'application/json'})
-            if r.status_code != 200:
-                raise Exception(f"status code: {r.status_code}, url: {r.url}")
-            
-            res = r.json()
-            if res["status"] != "ok":
-                raise Exception(f"send message failed, error info: {r.text}")
-            
-            logger.warning(f"sending success: {r.text}")
-            
-            if remove_at_all:
-                self.message.append(AtAllMsg())
-                
-            time.sleep(1)
+            ready = False
+
+            for i in range(0, 60):
+                if schedule.bot_ready():
+                    ready = True
+                    break
+                time.sleep(1)
+
+            if not ready:
+                logger.error("bot not ready, send mail")
+                fail_mail()
+
+            url = f"{config.llonebot}/send_group_msg"
+
+            for id in config.groups:
+                self.group_id = id
+                remove_at_all = False
+
+                for msg in self.message:
+                    if isinstance(msg, AtAllMsg) and ((id not in config.at_all) or (not self.check_at_all())):
+                        remove_at_all = True
+                        self.message.remove(msg)
+
+                r = requests.post(url = url, data = self.toJson(), headers = {'Content-Type': 'application/json'})
+                if r.status_code != 200:
+                    raise Exception(f"status code: {r.status_code}, url: {r.url}")
+
+                res = r.json()
+                if res["status"] != "ok":
+                    raise Exception(f"send message failed, error info: {r.text}")
+
+                logger.warning(f"sending success: {r.text}")
+
+                if remove_at_all:
+                    self.message.append(AtAllMsg())
+
+                time.sleep(1)
+
+        except Exception as e:
+            raise e
+
+        finally:
+            if config.auto_schedule:
+                schedule.set_can_stop(True)
 
 
 class TextMsg:
@@ -162,25 +233,3 @@ class AtAllMsg:
         self.data = {
             "qq": "all"
         }
-
-
-def init(addr: str, group: list, at: list):
-    global llonebot
-    global groups
-    global at_all
-    llonebot = addr
-    groups = group
-    at_all = at
-
-
-def check_bot():
-    if llonebot == "":
-        raise Exception("llonebot addr not set")
-    
-    r = requests.post(url = f"{llonebot}/get_status")
-    if r.status_code != 200:
-        raise Exception("Get bot status failed, check url")
-    
-    res = r.json()
-    if res["status"] != "ok":
-        raise Exception(f"Bot status abnormal, info: {r.text}")
