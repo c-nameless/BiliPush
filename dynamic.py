@@ -1,5 +1,6 @@
 import json
 import time
+import config
 import account
 import requests
 from logger import logger
@@ -10,13 +11,10 @@ from message import GroupMsg, TextMsg, Base64ImageMsg, NetworkImageMsg, AtAllMsg
 
 
 id_str = []
-browser_type = ""
-browser_path = ""
-driver_path = ""
 
 
-def api_get_recent_dynamic(uid: int):
-    r = requests.get(f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?host_mid={uid}", headers=account.headers, cookies=account.cookies)
+def api_get_recent_dynamic():
+    r = requests.get(f"https://api.bilibili.com/x/polymer/web-dynamic/v1/feed/all?host_mid={config.uid}", headers=account.headers, cookies=account.cookies)
     if r.status_code != 200:
         raise Exception(f"status code: {r.status_code}, url: {r.url}")
     
@@ -58,39 +56,28 @@ def get_pic_url_from_dynamic(item):
 
 
 def init_browser():
-    if browser_type.lower() == "chrome":
+    if config.browser_type.lower() != "chrome" and config.browser_type.lower() != "firefox":
+        raise Exception("unknown browser type")
+    
+    if config.browser_type.lower() == "chrome":
         options = ChromeOptions()
         options.add_argument("--headless")
-        options.binary_location=browser_path
-        service = ChromeService(executable_path=driver_path)
+        options.binary_location=config.browser_path
+        service = ChromeService(executable_path=config.driver_path)
         driver = Chrome(options=options, service=service)
     else:
         options = FirefoxOptions()
         options.add_argument("--headless")
-        options.binary_location=browser_path
-        service = FirefoxService(executable_path=driver_path)
+        options.binary_location=config.browser_path
+        service = FirefoxService(executable_path=config.driver_path)
         driver = Firefox(options=options, service=service)
     
     driver.implicitly_wait(10)
     return driver
 
 
-def init(browser_type_arg: str, browser_path_arg: str, driver_arg):
-    global browser_type
-    global browser_path
-    global driver_path
-    
-    if browser_type_arg.lower() != "chrome" and browser_type_arg.lower() != "firefox":
-        raise Exception("unknown browser type")
-    
-    browser_type = browser_type_arg.lower()
-    browser_path = browser_path_arg
-    driver_path = driver_arg
-    
-    init_browser()
-
-
 def browser_get(id: int):
+    logger.info("start browser")
     driver = init_browser()
     
     driver.get("https://www.bilibili.com")
@@ -112,10 +99,23 @@ def browser_get(id: int):
             success = True
             break
         except:
-            logger.error("selenium get dynamic error", exc_info = True)
+            logger.warning(f"class {name} not found, try another")
 
     if not success:
         driver.save_screenshot("err.png")
+
+    cookie = {}
+    need_update = False
+    for key, value in account.cookies.items():
+        new_cookie = driver.get_cookie(key)
+        if new_cookie is not None:
+            cookie[key] = new_cookie["value"]
+            if new_cookie["value"] != value:
+                need_update = True
+
+    if need_update:
+        logger.warning(f"cookie change. new cookie: {cookie}")
+        account.set_cookies(cookie)
 
     driver.quit()
     return success, dynamic_img
@@ -147,13 +147,15 @@ def send_new_dynamic(data):
             msg.clear()
 
 
-def run(uid: int, interval: int):
+def main():
+    init_browser()
+    
     global id_str
     skip_first = True
     
     while True:
         try:
-            data = api_get_recent_dynamic(uid=uid)
+            data = api_get_recent_dynamic()
             
             if skip_first:
                 id_str = get_id_str_from_data(data=data)
@@ -181,28 +183,10 @@ def run(uid: int, interval: int):
             logger.error(f"an error occurred, waiting for next query.", exc_info = True)
             
         finally:
-            time.sleep(interval)
-
-
-def main(uid: int, interval_arg:int):
-    if interval_arg < 1:
-        interval_arg = 1
-    
-    run(uid = uid, interval = interval_arg * 60)
+            time.sleep(config.dynamic_interval * 60)
 
 
 if __name__ == '__main__':
-    import message
-    
-    config = open("./data/config.json", 'r', encoding="utf-8")
-    configJson = json.load(config)
-    
-    message.init(addr=configJson["llonebot"],group = configJson["groups"] ,at=configJson["at_all"])
-    message.check_bot()
-    
     account.check_login()
-    
-    init(configJson["browser_type"],configJson["browser_path"],configJson["driver_path"])
-
-    main(configJson["uid"], configJson["live_interval"])
+    main()
     
