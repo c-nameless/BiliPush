@@ -1,7 +1,8 @@
 import json
 import time
-import account
 import base64
+import config
+import account
 import requests
 import traceback
 from PIL import Image
@@ -12,9 +13,6 @@ from dateutil import parser, relativedelta
 from message import GroupMsg, TextMsg, Base64ImageMsg, AtAllMsg
 
 
-max_retry = 30
-retry_times = 0
-interval = 0
 room_id = 0
 uname = ""
 
@@ -58,14 +56,14 @@ def get_base64_image(url: str):
     return base64.b64encode(res.getvalue())
     
 
-def get_live_info(uid: int):
+def get_live_info():
     global room_id
     global uname
     
     if uname != "" and room_id != 0:
         return room_id
     
-    info = bili_api_get(f"https://api.live.bilibili.com/live_user/v1/Master/info?uid={uid}")
+    info = bili_api_get(f"https://api.live.bilibili.com/live_user/v1/Master/info?uid={config.uid}")
     
     uname = info["info"]["uname"]
     room_id = info["room_id"]
@@ -73,6 +71,7 @@ def get_live_info(uid: int):
     if uname == "" or room_id == 0:
         raise Exception("get room id error, check uid first")
     
+    logger.warning(f"watching {uname} now")
     return room_id
 
 
@@ -87,6 +86,7 @@ def get_room_info(id: int) -> RoomInfo:
 
 
 def get_live_endtime() -> tuple[datetime, bool]:
+    now = datetime.now()
     try:
         totalPage = 1
         i = 1
@@ -106,15 +106,14 @@ def get_live_endtime() -> tuple[datetime, bool]:
                     
                     live_end_time = datetime.fromtimestamp(record_live_time)
                     logger.info(f"get live end time from api, end time: {live_end_time}")
-                    return (live_end_time, True)
+                    return live_end_time, True
             time.sleep(1)
             i += 1
         raise Exception("get end time from api failed")
         
     except:
-        live_end_time = datetime.now()
-        logger.info(f"get live end time from local, end time: {live_end_time}")
-        return (live_end_time, False)
+        logger.info(f"get live end time from local, end time: {now}")
+        return now, False
 
 
 def start_living(room_info: RoomInfo):
@@ -155,10 +154,12 @@ def end_living(live_start: str):
     return True
 
 
-def run(uid: int):
-    global interval
-    global retry_times
-    get_live_info(uid=uid)
+def main():
+    interval = config.live_interval * 60
+    retry_times = 0
+    max_retry = 30
+    
+    get_live_info()
     
     live_status = {
         "living": False,
@@ -232,25 +233,7 @@ def run(uid: int):
             time.sleep(interval)
 
 
-def main(uid: int, interval_arg: int):
-    if interval_arg < 1:
-        interval_arg = 1
-    
-    global interval
-    interval = interval_arg * 60
-    
-    run(uid = uid)
-
-
 if __name__ == "__main__":
-    import message
-    
-    config = open("./data/config.json", 'r', encoding="utf-8")
-    configJson = json.load(config)
-    
-    message.init(addr=configJson["llonebot"],group = configJson["groups"] ,at=configJson["at_all"])
-    message.check_bot()
-
     account.check_login()
-    main(configJson["uid"], configJson["live_interval"])
+    main()
     
