@@ -27,6 +27,8 @@ if auto_schedule:
     qq_path: str = j["qq_path"]
     if qq_path == "":
         raise Exception("qq_path not set")
+    
+    mail = j["mail"]
 
 start_hour: int = j["start_hour"]
 stop_hour: int = j["stop_hour"]
@@ -64,5 +66,3 @@ if dynamic_interval < 1:
 live_interval: int = j["live_interval"]
 if live_interval < 1:
     live_interval = 1
-
-mail = j["mail"]
