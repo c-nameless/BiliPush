@@ -1,6 +1,7 @@
 import json
 import live
 import time
+import config
 import sqlite3
 import traceback
 from logger import logger
@@ -22,28 +23,28 @@ cursor.execute(f'''
 conn.commit()
 
 
-def get_follower_num(uid: int):
-    data = live.bili_api_get(f"https://api.bilibili.com/x/relation/stat?vmid={uid}")
+def get_follower_num():
+    data = live.bili_api_get(f"https://api.bilibili.com/x/relation/stat?vmid={config.uid}")
     return data["follower"]
 
 
 
-def get_captain_num(uid: int):
+def get_captain_num():
     room_id = live.room_id
     if room_id == 0:
-        room_id = live.get_live_info(uid)
+        room_id = live.get_live_info()
         
-    data = live.bili_api_get(f"https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topListNew?roomid={room_id}&page=1&ruid={uid}&page_size=20&typ=5&platform=web")
+    data = live.bili_api_get(f"https://api.live.bilibili.com/xlive/app-room/v2/guardTab/topListNew?roomid={room_id}&page=1&ruid={config.uid}&page_size=20&typ=5&platform=web")
     return data["info"]["num"]
 
 
-def save_to_db(uid: int, timestamp: int, follower: int, captain: int):
-    cursor.execute(f"INSERT INTO {table} (uid, timestamp, follower, captain) values ({uid}, {timestamp}, {follower}, {captain})")
+def save_to_db(timestamp: int, follower: int, captain: int):
+    cursor.execute(f"INSERT INTO {table} (uid, timestamp, follower, captain) values ({config.uid}, {timestamp}, {follower}, {captain})")
     conn.commit()
     logger.info("follower or captain num change, save statistics into db")
 
 
-def run(uid: int):
+def run():
     follower_old = -1
     captain_old = -1
     
@@ -69,13 +70,13 @@ def run(uid: int):
             continue
         
         try:
-            follower = get_follower_num(uid=uid)
-            captain = get_captain_num(uid=uid)
+            follower = get_follower_num()
+            captain = get_captain_num()
             
             if follower_old == -1 and captain_old == -1:
                 follower_old = follower
                 captain_old = captain
-                save_to_db(uid=uid, timestamp=timestamp, follower=follower, captain=captain)
+                save_to_db(timestamp=timestamp, follower=follower, captain=captain)
                 continue
             
             if follower_old != follower or captain_old != captain:
@@ -84,7 +85,7 @@ def run(uid: int):
                 logger.info(f"now: follower: {follower}, captain: {captain}")
                 follower_old = follower
                 captain_old = captain
-                save_to_db(uid=uid, timestamp=timestamp, follower=follower, captain=captain)
+                save_to_db(timestamp=timestamp, follower=follower, captain=captain)
                 continue
             
             
@@ -96,10 +97,10 @@ def run(uid: int):
             time.sleep(200)
             
 
-def main(uid: int):
+def main():
     try:
         cursor.execute(f"SELECT timestamp FROM {table} ORDER BY timestamp DESC LIMIT 1")
-        run(uid=uid)
+        run()
         
     except:
         traceback.print_exc()
@@ -113,12 +114,6 @@ def main(uid: int):
 if __name__ == '__main__':
     import os
     import account
-    
     os.makedirs("./data", exist_ok=True)
-    
-    config = open("./data/config.json", 'r', encoding="utf-8")
-    configJson = json.load(config)
-    
     account.check_login()
-
-    main(configJson["uid"])
+    main()
