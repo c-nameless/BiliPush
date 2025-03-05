@@ -1,5 +1,5 @@
-import json
 import time
+import common
 import config
 import account
 import requests
@@ -153,7 +153,7 @@ def main():
     global id_str
     skip_first = True
     
-    while True:
+    while not common.exit_event.is_set():
         try:
             data = api_get_recent_dynamic()
             
