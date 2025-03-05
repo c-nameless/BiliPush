@@ -29,7 +29,15 @@
     "groups": [111,222,333],
     "at_all": [111],
     "dynamic_interval": 5,
-    "live_interval": 1
+    "live_interval": 1,
+    "mail": {
+        "sender": "114514@qq.com",
+        "receiver": "1919810@qq.com",
+        "password": "password",
+        "server": "smtp.qq.com",
+        "port": 465,
+        "ssl": true
+    }
 }
 ```
 
@@ -45,6 +53,13 @@ groups: 当检测到开播或新动态时，发送通知的群
 at_all: 启用@all的群，需要群管理员权限
 dynamic_interval: 动态检测频率，单位分钟
 live_interval: 直播检测频率，单位分钟
+mail: 邮件对象，包含发送邮件所使用的变量
+mail["sender"]: 发送者邮箱，可以与接收者邮箱一致
+mail["receiver"]: 接收者邮箱，可以与发送者邮箱一致
+mail["password"]: 发送者邮箱的密码，部分邮箱需要单独的认证码
+mail["server"]: smtp服务器地址
+mail["port"]: smtp服务器端口
+mail["ssl"]: 是否启用ssl
 ```
 
 ## step3: 运行
