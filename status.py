@@ -55,7 +55,7 @@ def main():
             logger.info("less than 1min, skip")
             time.sleep(sub)
     
-    res = cursor.execute(f"SELECT follower, captain FROM {table} WHERE id = (SELECT MAX(id) FROM {table}) AND uid = {config.uid}").fetchone()
+    res = cursor.execute(f"SELECT follower, captain FROM {table} WHERE id = (SELECT MAX(id) FROM {table} WHERE uid = {config.uid})").fetchone()
     if res is not None:
         follower_old, captain_old = res
     
