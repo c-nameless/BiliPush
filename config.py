@@ -30,16 +30,16 @@ if auto_schedule:
     
     mail = j["mail"]
 
-start_hour: int = j["start_hour"]
-stop_hour: int = j["stop_hour"]
-if start_hour == stop_hour:
-    raise Exception("start_hour same with stop_hour, exit")
+    start_hour: int = j["start_hour"]
+    stop_hour: int = j["stop_hour"]
+    if start_hour == stop_hour:
+        raise Exception("start_hour same with stop_hour, exit")
 
-if stop_hour >= 24  or stop_hour < 0:
-    raise Exception("stop_hour out of range. 0-23")
+    if stop_hour >= 24  or stop_hour < 0:
+        raise Exception("stop_hour out of range. 0-23")
 
-if start_hour >= 24 or start_hour < 0:
-    raise Exception("start_hour out of range. 0-23")
+    if start_hour >= 24 or start_hour < 0:
+        raise Exception("start_hour out of range. 0-23")
 
 uid: int = j["uid"]
 if uid <= 0:

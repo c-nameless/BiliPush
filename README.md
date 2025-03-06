@@ -11,7 +11,7 @@
 
 若将`auto_schedule`设置为`true`，请在qq中将自动登录选项开启。同时，确保在本程序启动前***退出所有***qq客户端
 
-若将`auto_schedule`设置为`true`，`qq_path`与`mail`对象相关属性必填，反之则不必填写
+若将`auto_schedule`设置为`true`，`qq_path`，`mail`对象相关属性，启停时间必填，反之则不必填写
 
 若自动启停客户端失败，会发送邮件通知
 
