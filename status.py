@@ -1,9 +1,8 @@
-import json
 import live
 import time
+import common
 import config
 import sqlite3
-import traceback
 from logger import logger
 
 
@@ -44,7 +43,7 @@ def save_to_db(timestamp: int, follower: int, captain: int):
     logger.info("follower or captain num change, save statistics into db")
 
 
-def run():
+def main():
     follower_old = -1
     captain_old = -1
     
@@ -61,7 +60,7 @@ def run():
         follower_old, captain_old = res
     
     logger.info("start watching follower and captain num")
-    while True:
+    while not common.exit_event.is_set():
         timestamp = int(time.time())
         m = time.localtime(timestamp).tm_min
 
@@ -90,25 +89,10 @@ def run():
             
             
         except:
-            traceback.print_exc()
             logger.error(f"An error occurred while query statistics info, waiting for next query.", exc_info = True)
             
         finally:
             time.sleep(200)
-            
-
-def main():
-    try:
-        cursor.execute(f"SELECT timestamp FROM {table} ORDER BY timestamp DESC LIMIT 1")
-        run()
-        
-    except:
-        traceback.print_exc()
-        logger.error("db operation failed", exc_info=True)
-        
-    finally:
-        conn.commit()
-        conn.close()
 
 
 if __name__ == '__main__':
